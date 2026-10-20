@@ -583,7 +583,7 @@ codex login</pre></div>
           <div class="copyable"><div class="card-head"><h3>From the CLI</h3><button type="button" class="copy lbl" data-copy>Copy <span aria-hidden="true">→</span></button></div>
             <pre class="cmd">node plugins/check-loop/scripts/codex-invoke.mjs config --project --effort high</pre>
           </div>
-          <div><h3>What's new in 5.2</h3><p>Execution review runs in code, one <code>codex app-server</code> per command instead of a shared broker, and the scripts are less than half their old size.</p></div>
+          <div><h3>What's new in 5.2.1</h3><p>Step snapshots reuse git's index cache, so recording a 20,000-file tree takes about 50 ms instead of 2 seconds. 5.2 moved execution review into code and replaced the shared broker with one <code>codex app-server</code> per command.</p></div>
           <div><h3>Develop</h3><p>The loop lives in <code>scripts/lib/review-loop.mjs</code>. <code>node --test tests/</code> runs without model access.</p>
             <div class="links lbl">
               <a href="https://github.com/Novacon/check-loop">GitHub <span aria-hidden="true">↗</span></a>

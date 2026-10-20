@@ -1,6 +1,6 @@
 {
   "name": "lordknows13-check-loop",
-  "version": "5.2.0",
+  "version": "5.2.1",
   "private": true,
   "description": "Adversarial plan refinement, peer-reviewed research, and supervised execution with a Codex reviewer.",
   "license": "MIT",

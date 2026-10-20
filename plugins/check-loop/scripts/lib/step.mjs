@@ -8,7 +8,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { loadRun, redactSecrets, resolveRunFile, runReviewRound } from "./review-loop.mjs";
+import { loadRun, redactSecrets, resolveRunFile, runReviewRound, writeJsonAtomic } from "./review-loop.mjs";
 
 const EXECUTION_VERSION = 1;
 // Discovery plus three reviewer-driven fix re-reviews.
@@ -32,7 +32,12 @@ function git(root, args, env = {}) {
 export function snapshotTree(root) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "check-loop-index-"));
   try {
-    const env = { GIT_INDEX_FILE: path.join(dir, "index") };
+    const index = path.join(dir, "index");
+    // Seeding from the real index lets `add -A` reuse its stat cache instead of
+    // rehashing every file; the copy is discarded, so the real index is untouched.
+    const real = path.resolve(root, git(root, ["rev-parse", "--git-path", "index"]).trim());
+    if (fs.existsSync(real)) fs.copyFileSync(real, index);
+    const env = { GIT_INDEX_FILE: index };
     git(root, ["add", "-A", "--", "."], env);
     return git(root, ["write-tree"], env).trim();
   } finally {
@@ -61,10 +66,7 @@ export function loadExecution(plan, env = process.env) {
 }
 
 function saveExecution(execution, env) {
-  const file = resolveRunFile(executionKey(execution.plan), env);
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, `${JSON.stringify(execution, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
-  return file;
+  return writeJsonAtomic(resolveRunFile(executionKey(execution.plan), env), execution);
 }
 
 /**
@@ -73,9 +75,9 @@ function saveExecution(execution, env) {
  */
 export function beginStep(options) {
   const env = options.env ?? process.env;
-  const { execution, plan } = loadOrStartExecution(options, env);
+  const { execution, plan, created } = loadOrStartExecution(options, env);
   const id = String(options.step);
-  const tree = snapshotTree(options.root);
+  const tree = created ? execution.baseTree : snapshotTree(options.root);
   execution.steps[id] = { ...(execution.steps[id] ?? {}), base: tree, outcome: null };
   saveExecution(execution, env);
   return { status: 0, error: null, step: id, baseTree: tree, head: execution.head, executionFile: resolveRunFile(executionKey(plan), env) };
@@ -92,7 +94,8 @@ function loadOrStartExecution(options, env) {
   if (execution && execution.planHash !== sha(planText)) {
     throw new Error("The plan changed since execution started. Pass --new to start a new execution against the current plan.");
   }
-  if (!execution) {
+  const created = !execution;
+  if (created) {
     execution = {
       version: EXECUTION_VERSION,
       plan,
@@ -106,7 +109,7 @@ function loadOrStartExecution(options, env) {
     };
     saveExecution(execution, env);
   }
-  return { execution, plan, planText };
+  return { execution, plan, planText, created };
 }
 
 /**
@@ -136,10 +139,12 @@ export async function runStepRound(options) {
     requestText = `Approved plan:\n<plan>\n${planText}\n</plan>\n\nStep contract:\n${requestText}`;
   }
 
+  let latest = null;
   const source = {
     key: stepKey,
     read() {
       const tree = snapshotTree(root);
+      latest = tree;
       const redacted = redactSecrets(treeDiff(root, base, tree));
       return { hash: tree, text: redacted.text, redactions: redacted.count };
     },
@@ -174,12 +179,11 @@ export async function runStepRound(options) {
     saveExecution(execution, env);
   }
 
-  const head = snapshotTree(root);
   return {
     ...result,
     step: id,
     baseTree: base,
-    omittedProtectedPaths: protectedChanges(root, base, head),
+    omittedProtectedPaths: protectedChanges(root, base, latest),
     executionFile: resolveRunFile(executionKey(plan), env),
   };
 }

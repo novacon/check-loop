@@ -13,7 +13,7 @@ The model your session runs on is the orchestrator. It runs the workflow and che
 
 A review finding needs evidence before it can block progress. The orchestrator opens the cited source instead of accepting a concern because another model raised it.
 
-Current version: 5.2.0. The first release shipped in March 2026, ten days before OpenAI's own Codex plugin for Claude Code and before the other cross-model review loops credited in the changelog.
+Current version: 5.2.1. The first release shipped in March 2026, ten days before OpenAI's own Codex plugin for Claude Code and before the other cross-model review loops credited in the changelog.
 
 ## Install
 
@@ -225,6 +225,12 @@ claude plugin validate ./.claude-plugin/marketplace.json
 ```
 
 The tests cover settings precedence, invalid configuration, reviewer setting mismatches, failed or empty responses, and the review loop's rules: diff-only later rounds, closure gating, repeat suppression, one-time disputes, stall detection, the round limit and closeout, retries, and secret redaction. The step tests cover tree snapshots that skip ignored and protected files, step-scoped diffs, base chaining across steps, the three-fix cap, and a plan that changes mid-execution. None of them need model access. For a live check, use an authenticated Codex CLI and a disposable repository.
+
+## Changes in 5.2.1
+
+- **Faster step snapshots.** The runner copies the repository's index before recording the working tree, so git rehashes only changed files instead of every file. On a 20,000-file repository a snapshot dropped from about 2 seconds to 50 ms, and each `step` call takes two or three. The real index is still never touched.
+- **One fewer snapshot per step.** A step review reuses the tree it just reviewed to list omitted protected paths, and the first `--begin` reuses the execution base.
+- **Safer execution state.** The execution file is now written through a rename, like review runs, so an interrupted write can't truncate it.
 
 ## Changes in 5.2.0
 

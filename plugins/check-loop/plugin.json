@@ -1,6 +1,6 @@
 {
   "name": "check-loop",
-  "version": "5.2.0",
+  "version": "5.2.1",
   "description": "Plan refinement, research, and execution with fresh implementer subagents and configurable Codex review",
   "author": {
     "name": "lordknows13"

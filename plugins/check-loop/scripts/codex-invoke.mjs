@@ -37,8 +37,6 @@ function hasOwn(value, key) {
   return Object.prototype.hasOwnProperty.call(value, key);
 }
 
-const parseCommandArgs = parseArgs;
-
 function parseMaxRounds(value) {
   if (!/^\d+$/.test(value)) {
     throw new Error("Invalid maximum review rounds: expected an integer from 1 through 40.");
@@ -103,8 +101,7 @@ function writeProgress(message) {
   process.stderr.write(`[codex] ${message}\n`);
 }
 
-function writeCommandResult(result, response) {
-  const payload = buildReviewResult(result, response);
+function writePayload(payload) {
   process.stdout.write(`${JSON.stringify(payload)}\n`);
   if (payload.status !== 0) {
     process.stderr.write(`[codex] ${payload.error}\n`);
@@ -112,12 +109,34 @@ function writeCommandResult(result, response) {
   }
 }
 
+function writeCommandResult(result, response) {
+  writePayload(buildReviewResult(result, response));
+}
+
+/** The read-only, persistent reviewer turn that `round` and `step` drive. */
+function reviewTransport(root, timeoutMs) {
+  return async (prompt, turn) => {
+    const result = await runAppServerTurn(root, {
+      resumeThreadId: turn.threadId,
+      prompt,
+      model: turn.model,
+      effort: turn.effort,
+      outputSchema: turn.outputSchema,
+      sandbox: "read-only",
+      persistThread: true,
+      timeoutMs,
+      onProgress: writeProgress,
+    });
+    return buildReviewResult(result, result.finalMessage);
+  };
+}
+
 // ---------------------------------------------------------------------------
 // turn -- start or continue a Codex conversation
 // ---------------------------------------------------------------------------
 
 async function handleTurn(argv) {
-  const options = parseCommandArgs(argv, {
+  const options = parseArgs(argv, {
     valueOptions: ["prompt", "prompt-file", "thread-id", "cwd", "model", "effort", "timeout-minutes"],
   }, "turn");
 
@@ -151,7 +170,7 @@ async function handleTurn(argv) {
 // ---------------------------------------------------------------------------
 
 async function handleRound(argv) {
-  const options = parseCommandArgs(argv, {
+  const options = parseArgs(argv, {
     valueOptions: [
       "kind", "artifact", "request-file", "adjudication-file", "cwd",
       "model", "effort", "max-rounds", "timeout-minutes",
@@ -174,7 +193,7 @@ async function handleRound(argv) {
   }
   const timeoutMs = parseTimeoutMs(options);
 
-  const payload = await runReviewRound({
+  writePayload(await runReviewRound({
     cwd,
     artifact: options.artifact,
     kind: options.kind,
@@ -183,27 +202,8 @@ async function handleRound(argv) {
     requestText: options["request-file"] ? fs.readFileSync(path.resolve(cwd, options["request-file"]), "utf8") : undefined,
     adjudication: options["adjudication-file"] ? readJsonFile(options["adjudication-file"], "adjudication file") : null,
     settings: existing ? undefined : resolveReviewConfig(cwd, overrides),
-    transport: async (prompt, turn) => {
-      const result = await runAppServerTurn(workspaceRoot, {
-        resumeThreadId: turn.threadId,
-        prompt,
-        model: turn.model,
-        effort: turn.effort,
-        outputSchema: turn.outputSchema,
-        sandbox: "read-only",
-        persistThread: true,
-        timeoutMs,
-        onProgress: writeProgress,
-      });
-      return buildReviewResult(result, result.finalMessage);
-    },
-  });
-
-  process.stdout.write(`${JSON.stringify(payload)}\n`);
-  if (payload.status !== 0) {
-    process.stderr.write(`[codex] ${payload.error}\n`);
-    process.exitCode = 1;
-  }
+    transport: reviewTransport(workspaceRoot, timeoutMs),
+  }));
 }
 
 // ---------------------------------------------------------------------------
@@ -211,7 +211,7 @@ async function handleRound(argv) {
 // ---------------------------------------------------------------------------
 
 async function handleStep(argv) {
-  const options = parseCommandArgs(argv, {
+  const options = parseArgs(argv, {
     valueOptions: ["plan", "step", "contract-file", "validation-file", "adjudication-file", "cwd", "timeout-minutes"],
     booleanOptions: ["begin", "new", "new-step"],
   }, "step");
@@ -230,7 +230,7 @@ async function handleStep(argv) {
   const timeoutMs = parseTimeoutMs(options);
   const readText = (key) => (options[key] ? fs.readFileSync(path.resolve(cwd, options[key]), "utf8") : undefined);
 
-  const payload = await runStepRound({
+  writePayload(await runStepRound({
     cwd,
     root,
     plan: options.plan,
@@ -241,31 +241,12 @@ async function handleStep(argv) {
     newExecution: options.new === true,
     newStep: options["new-step"] === true,
     settings: resolveReviewConfig(cwd),
-    transport: async (prompt, turn) => {
-      const result = await runAppServerTurn(root, {
-        resumeThreadId: turn.threadId,
-        prompt,
-        model: turn.model,
-        effort: turn.effort,
-        outputSchema: turn.outputSchema,
-        sandbox: "read-only",
-        persistThread: true,
-        timeoutMs,
-        onProgress: writeProgress,
-      });
-      return buildReviewResult(result, result.finalMessage);
-    },
-  });
-
-  process.stdout.write(`${JSON.stringify(payload)}\n`);
-  if (payload.status !== 0) {
-    process.stderr.write(`[codex] ${payload.error}\n`);
-    process.exitCode = 1;
-  }
+    transport: reviewTransport(root, timeoutMs),
+  }));
 }
 
 function handleReport(argv) {
-  const options = parseCommandArgs(argv, { valueOptions: ["artifact", "plan", "step", "cwd"] }, "report");
+  const options = parseArgs(argv, { valueOptions: ["artifact", "plan", "step", "cwd"] }, "report");
   const cwd = resolveCwd(options);
   let key;
   if (options.plan && options.step) {
@@ -287,7 +268,7 @@ function handleReport(argv) {
 // ---------------------------------------------------------------------------
 
 async function handleReview(argv) {
-  const options = parseCommandArgs(argv, {
+  const options = parseArgs(argv, {
     valueOptions: ["scope", "base", "cwd", "model", "effort", "timeout-minutes"],
   }, "review");
 
@@ -316,7 +297,7 @@ async function handleReview(argv) {
 // ---------------------------------------------------------------------------
 
 function handleSetup(argv) {
-  const options = parseCommandArgs(argv, {
+  const options = parseArgs(argv, {
     valueOptions: ["cwd", "model", "effort", "max-rounds"],
   }, "setup");
 
@@ -364,7 +345,7 @@ function handleSetup(argv) {
 }
 
 function handleConfig(argv) {
-  const options = parseCommandArgs(argv, {
+  const options = parseArgs(argv, {
     valueOptions: ["cwd", "model", "effort", "max-rounds", "implementer-model"],
     booleanOptions: ["project"],
   }, "config");

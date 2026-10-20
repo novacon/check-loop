@@ -61,6 +61,19 @@ test("tree snapshots see untracked files, skip ignored ones, and leave the index
   assert.doesNotMatch(diff, /prod\.env|abc123/);
   assert.deepEqual(protectedChanges(root, base, after), ["config/prod.env"]);
   assert.equal(sh("diff", "--cached", "--name-only").trim(), "", "index must stay clean");
+
+  // The snapshot reuses the real index's stat cache but must still reflect the
+  // working tree, not staged content, and must leave staged state as it was.
+  writeFileSync(join(root, "src.js"), "staged\n");
+  sh("add", "src.js");
+  writeFileSync(join(root, "src.js"), "worktree\n");
+  rmSync(join(root, ".gitignore"));
+  const seeded = treeDiff(root, base, snapshotTree(root));
+  assert.match(seeded, /\+worktree/);
+  assert.doesNotMatch(seeded, /\+staged/);
+  assert.match(seeded, /deleted file mode[\s\S]*\.gitignore|\.gitignore[\s\S]*deleted file mode/);
+  assert.equal(sh("diff", "--cached", "--name-only").trim(), "src.js");
+  assert.equal(sh("show", ":src.js"), "staged\n");
 });
 
 test("a step reviews the delta from its base, re-reviews only the fix, and chains bases across steps", async (t) => {

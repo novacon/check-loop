@@ -135,14 +135,18 @@ export function loadRun(artifactPath, env = process.env) {
   return run;
 }
 
-function saveRun(run, env) {
-  const file = resolveRunFile(run.artifact, env);
+/** Write owner-only JSON through a rename so an interrupted write never truncates state. */
+export function writeJsonAtomic(file, value) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  run.updatedAt = new Date().toISOString();
   const temp = `${file}.${process.pid}.tmp`;
-  fs.writeFileSync(temp, `${JSON.stringify(run, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+  fs.writeFileSync(temp, `${JSON.stringify(value, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
   fs.renameSync(temp, file);
   return file;
+}
+
+function saveRun(run, env) {
+  run.updatedAt = new Date().toISOString();
+  return writeJsonAtomic(resolveRunFile(run.artifact, env), run);
 }
 
 // ---------------------------------------------------------------------------
