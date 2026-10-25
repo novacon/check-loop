@@ -1,11 +1,10 @@
-```text
-       _               _    _
-   ___| |__   ___  ___| | _| |  ___  ___   _ __
-  / __| '_ \ / _ \/ __| |/ / | / _ \/ _ \ | '_ \
- | (__| | | |  __/ (__|   <| || (_\/ (_) || |_) |
-  \___|_| |_|\___|\___|_|\_\_| \___/\___/ | .__/
-                                          |_|
-```
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: light)" srcset="docs/logo-light.png">
+    <img src="docs/logo.png" alt="ohmyjev" width="420">
+  </picture>
+</p>
+
 
 check-loop is a plugin for Claude Code and pi that asks Codex to review a plan before you build it, check a research draft, or review code as you work through an approved plan.
 
