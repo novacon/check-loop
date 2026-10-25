@@ -1,6 +1,6 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: light)" srcset="docs/logo-light.png">
+    <source media="(prefers-color-scheme: light)" srcset="docs/logo.svg">
     <img src="docs/logo.svg" alt="checkloop" width="420">
   </picture>
 </p>
