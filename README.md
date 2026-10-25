@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: light)" srcset="docs/logo-light.png">
-    <img src="docs/logo.png" alt="ohmyjev" width="420">
+    <img src="docs/logo.svg" alt="checkloop" width="420">
   </picture>
 </p>
 
