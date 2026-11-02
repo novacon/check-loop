@@ -12,7 +12,7 @@ The model your session runs on is the orchestrator. It runs the workflow and che
 
 A review finding needs evidence before it can block progress. The orchestrator opens the cited source instead of accepting a concern because another model raised it.
 
-Current version: 5.2.1. The first release shipped in March 2026, ten days before OpenAI's own Codex plugin for Claude Code and before the other cross-model review loops credited in the changelog.
+Current version: 5.3.0. The first release shipped in March 2026, ten days before OpenAI's own Codex plugin for Claude Code and before the other cross-model review loops credited in the changelog.
 
 ## Install
 
@@ -224,6 +224,14 @@ claude plugin validate ./.claude-plugin/marketplace.json
 ```
 
 The tests cover settings precedence, invalid configuration, reviewer setting mismatches, failed or empty responses, and the review loop's rules: diff-only later rounds, closure gating, repeat suppression, one-time disputes, stall detection, the round limit and closeout, retries, and secret redaction. The step tests cover tree snapshots that skip ignored and protected files, step-scoped diffs, base chaining across steps, the three-fix cap, and a plan that changes mid-execution. None of them need model access. For a live check, use an authenticated Codex CLI and a disposable repository.
+
+## Changes in 5.3.0
+
+Ideas borrowed from [sol-loop](https://github.com/t3dotgg/tstack/blob/main/skills/sol-loop/SKILL.md).
+
+- **Fixes can't grow the diff.** After each accepted fix, `execute` checks `git diff --shortstat` against the step base and cuts anything the finding didn't require before re-review.
+- **Round budget follows risk.** Plan review now runs at most 3 rounds unless the plan touches security, permissions, auth, data loss, or state/concurrency, or you set a limit.
+- **PR review stamp.** When execution updates a pull request, it notes the review rounds and actual reviewer model in the description, plus effort and an approved verdict only when the result reported them.
 
 ## Changes in 5.2.1
 

@@ -123,4 +123,4 @@ Keep these values synchronized:
 3. `plugins/check-loop/plugin.json` → `version`
 4. `package.json` → `version` (pi package manifest)
 
-Current version: **5.2.1**
+Current version: **5.3.0**
