@@ -20,6 +20,8 @@ The orchestrator owns the plan. The configured Codex reviewer critiques it in on
 
 `--quick` means one review pass: add `--max-rounds 1` to the first `round` call. Use it for small or low-risk plans.
 
+Scale the budget to risk: pass `--max-rounds 3` unless the plan touches security, permissions, auth, data loss, or state/concurrency, or the user set a limit. Keep the configured limit for those areas.
+
 Read the complete plan, the original user request, and the repository files needed to verify claims.
 
 ## Preflight

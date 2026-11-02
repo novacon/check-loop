@@ -107,7 +107,7 @@ Only `VERIFIED` critical or important findings arrive as blockers. For each one,
 
 Model agreement, severity, confidence, and repetition are not evidence. `notes` and `questions` never block; act on a question only when the answer is verified and material.
 
-For accepted and countered findings, dispatch one fresh fixer with the current contract, the verified finding, and the chosen correction only. Re-run validation. Then continue:
+For accepted and countered findings, dispatch one fresh fixer with the current contract, the verified finding, and the chosen correction only. Re-run validation and `git diff --shortstat` against the step base; if the fix grew the diff beyond what the finding required, cut it back before re-review. Then continue:
 
 ```json
 {"decisions":[{"id":"S1","decision":"ACCEPT","reason":"src/a.js:12 confirmed; bound corrected."}]}
@@ -148,7 +148,7 @@ The final contract is the locked plan's acceptance criteria. Adjudicate and fix 
 
 Present the plan path and base commit, completed steps, changed files, exact validation commands and outcomes, runtime evidence, the accepted, rejected, and countered findings, open questions and residual risks, the final review outcome with actual model and effort, and `git status`.
 
-If the user cancels, stop, leave every change visible and uncommitted, and report `CANCELLED — NOT APPROVED`. Otherwise ask whether to commit and push. Until the user explicitly approves, do neither. If approved, create only the requested commits and push only the requested branch.
+If the user cancels, stop, leave every change visible and uncommitted, and report `CANCELLED — NOT APPROVED`. Otherwise ask whether to commit and push. Until the user explicitly approves, do neither. If approved, create only the requested commits and push only the requested branch. When updating a pull request, add `Reviewed with check-loop: N review rounds with MODEL` to its description, using the actual model from the result JSON; add `on EFFORT` only if the result reported it, and add `Codex verdict: approved` only if the final review converged.
 
 ## Common mistakes
 
